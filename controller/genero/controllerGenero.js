@@ -15,12 +15,12 @@ const generoDAO = require('../../model/DAO/genero.js')
 const inserirGenero = async function(genero, contentType){
     try {
 
-        if(contentType == 'application/json'){
-        if
+        if(String(contentType).toLowerCase() == 'application/json')
+        {
+                if
         (genero.nome_genero              == undefined   || genero.nome_genero                 == ''   ||  genero.nome_genero                == null     ||  genero.nome_genero .length          > 45 ||
          genero.descricao_genero         == undefined   || genero.descricao_genero            == ''   ||  genero.descricao_genero           == null   
         ){
-            console.log(genero)
             return MESSAGE.ERROR_REQUIRED_FILES //400
         }else{
             //Encaminha os dados do novo jogo para ser inserido no BD
@@ -43,117 +43,131 @@ const inserirGenero = async function(genero, contentType){
 const atualizarGenero = async function(genero, id, contentType){
     try{
 
-        if(contentType == 'application/json'){
+        if(String(contentType).toLowerCase() == 'application/json')
+        {
             if
-        (genero.nome               == undefined   || genero.nome                 == ''   ||  genero.nome                == null     ||
-         genero.descricao          == undefined   || genero.descricao            == ''   ||  genero.descricao           == null  
+        (id                              == ''          || id                          == undefined    || id                          == null     || isNaN(id)  || id  <= 0   ||
+            genero.nome                  == undefined   || genero.nome                 == ''           ||  genero.nome                == null     ||
+         genero.descricao                == undefined   || genero.descricao            == ''           ||  genero.descricao           == null  
         ){
                 return MESSAGE.ERROR_REQUIRED_FILES //400
             }else{
                 //Validar se o id existe no BD
                 let resultGenero = await buscarGenero(parseInt(id))
 
-                if(resultGenero.status_code == 200){
-                    //Update
-                    //Adiciona um atributo id no JSON para encaminhar id da requisição
-                    genero.id = parseInt(id)
-                    let result = await generoDAO.updateGenero(genero)
+                if(resultGenero != false || typeof(resultGenero) == 'object'){
+                    if(resultGenero.length > 0 ){
+                        //Update
+                        //Adiciona o ID do genero no JSON com os dados
+                        genero.id = parseInt(id)
 
-                    if(result){
-                        return MESSAGE.SUCCESS_UPDATE_ITEM //200
+                        let result = await generoDAO.updateGenero(genero)
+
+                        if(result){
+                            return MESSAGE.SUCCESS_UPDATED_ITEM //200
+                        }else{
+                            return MESSAGE.ERROR_INTERNAL_SERVER_MODEL //500
+                        }
                     }else{
-                        return MESSAGE.ERROR_INTERNAL_SERVER_MODEL //500
+                        return MESSAGE.ERROR_NOT_FOUND //404
                     }
-
-                }else if(resultGenero.status_code == 404){
-                    return MESSAGE.ERROR_NOT_FOUND //404
                 }else{
-                    return MESSAGE.ERROR_INTERNAL_SERVER_CONTROLLER //500
+                    return MESSAGE.ERROR_INTERNAL_SERVER_MODEL //500
                 }
             }
         }else{
             return MESSAGE.ERROR_CONTENT_TYPE //415
         }
-    }catch (error) {
-        return MESSAGE.ERROR_INTERNAL_SERVER_CONTROLLER //500
-    }
+} catch (error) {
+    return MESSAGE.ERROR_INTERNAL_SERVER_CONTROLLER //500
+}
 }
 
 //Função para excluir um genero
 const excluirGenero = async function(id) {
-    try {
-  
-      // Verifica se o ID foi passado corretamente
-      if (id == undefined || id == '' || isNaN(id)) {
-        return MESSAGE.ERROR_REQUIRED_FILES // 400 
-      }
-      if(id){
-        let verificar = await generoDAO.selectByIdGenero(id)
-        let resultGenero = await generoDAO.selectByIdGenero(id)
+        try {
+            if(id == '' || id == undefined || id == null || isNaN(id) || id <=0){
+                return MESSAGE.ERROR_REQUIRED_FILES //400
+    }else{
 
-        if(verificar != false || typeof(verificar) == 'object'){
-            if(verificar.length > 0){
-                if(resultGenero){
-                    return MESSAGE.SUCCESS_DELETED_ITEM
-                }else {
-                    return MESSAGE.ERROR_NOT_DELETE
+        //Funcção que verifica se  ID existe no BD
+        let resultGenero = await generoDAO.selectByIdGenero(parseInt(id))
+
+        if(resultGenero != false || typeof(resultGenero) == 'object'){
+            //Se existir, faremos o delete
+            if(resultGenero.length > 0){
+                //delete
+                let result = await generoDAO.deleteGenero(parseInt(id))
+
+                if(result){
+                    return MESSAGE.SUCCESS_DELETED_ITEM //200
+                }else{
+                    return MESSAGE.ERROR_INTERNAL_SERVER_MODEL //500
                 }
-            }else {
-                return MESSAGE.ERROR_NOT_DELETE
+            }else{
+                return MESSAGE.ERROR_NOT_FOUND //404
             }
-          }else {
-            return MESSAGE.ERROR_INTERNAL_SERVER_MODEL
-          }
-        } 
-    }catch (error){
-        return MESSAGE.ERROR_INTERNAL_SERVER_CONTROLLER
+        }else{
+            return MESSAGE.ERROR_INTERNAL_SERVER_MODEL //500
+        }
     }
+} catch (error) {
+    return MESSAGE.ERROR_INTERNAL_SERVER_CONTROLLER //500
+}
 }
 
 //Função para retornar todos os gêneros
 const listarGenero = async function() {
     try {
-      let dadosGenero = {};
+      let dadosGenero = {}
   
       let resultGenero = await generoDAO.selectAllGenero();
   
-      if (resultGenero && Array.isArray(resultGenero) && resultGenero.length > 0) {
-       
-        dadosGenero.status = true
-        dadosGenero.status_code = 200
-        dadosGenero.items = resultGenero.length
-        dadosGenero.generos = resultGenero
-  
-        return dadosGenero
-      } else {
-        return MESSAGE.ERROR_NOT_FOUND
-      }
-    } catch (error) {
-      return MESSAGE.ERROR_INTERNAL_SERVER_CONTROLLER
+      if(resultGenero != false || typeof(resultGenero) == 'object'){
+        if(resultGenero.length > 0){
+            //Criando um JSON de retorno de dados para a API
+            dadosGenero.status = true
+            dadosGenero.status_code = 200
+            dadosGenero.items = resultGenero.length
+            dadosGenero.films = resultGenero
+
+            return dadosGenero
+        }else{
+            return MESSAGE.ERROR_NOT_FOUND //404
+        }
+    }else{
+        return MESSAGE.ERROR_INTERNAL_SERVER_MODEL //500
     }
+} catch (error) {
+    return MESSAGE.ERROR_INTERNAL_SERVER_CONTROLLER //500
+}
   }
   
 
 //Função para buscar um genero
 const buscarGenero = async function(id) { //recebe ID
-    try {
-        let dadosGenero = {}
+     try {
+        if(id == '' || id == undefined || id == null || isNaN(id) || id <=0){
+            return MESSAGE.ERROR_REQUIRED_FIELDS //400
+        }else{
+            dadosGenero = {}
 
-        //verifica se o ID foi passado correto
-        if (id == undefined || id == '' || isNaN(id)) {
-            return MESSAGE.ERROR_REQUIRED_FILES //400
-        }
+            let resultGenero = await generoDAO.selectByIdgenero(parseInt(id))
+            
+            if(resultGenero != false || typeof(resultGenero) == 'object'){
+                if(resultGenero.length > 0){
+                     //Criando um JSON de retorno de dados para a API
+                    dadosGenero.status = true
+                    dadosGenero.status_code = 200
+                    dadosGenero.genero = resultGenero
 
-        let resultGenero = await generoDAO.selectByIdGenero(id)
-
-        if (resultGenero) {
-            dadosGenero.status = true
-            dadosGenero.status_code = 200
-            dadosGenero.game = resultGenero
-
-            return dadosGenero  //200
-        } else {
-            return MESSAGE.ERROR_NOT_FOUND //404
+                    return dadosGenero //200
+                }else{
+                    return MESSAGE.ERROR_NOT_FOUND //404
+                }
+            }else{
+                return MESSAGE.ERROR_INTERNAL_SERVER_MODEL //500
+            }
         }
 
     } catch (error) {
